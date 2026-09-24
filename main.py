@@ -44,7 +44,20 @@ def get_photo_save():
 
 @client.on(events.NewMessage)
 async def new_message(event):
+@client.on(events.NewMessage)
+async def new_message(event):
+    print(">>> NEW MESSAGE EVENT RECEIVED")
 
+    if not event.is_private:
+        return
+
+    if event.out:
+        return
+
+    if not event.photo:
+        return
+
+    print(">>> PRIVATE PHOTO RECEIVED")
     # فقط PV
     if not event.is_private:
         return

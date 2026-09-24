@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 from telethon import TelegramClient, events
 
@@ -21,57 +20,52 @@ async def new_message(event):
     if not event.is_private:
         return
 
-    # پیام‌های خودمان را نادیده بگیر
-    if event.out:
+    # فقط پیام‌هایی که Reply هستند
+    if not event.is_reply:
         return
-
-    # فقط عکس یا تصویر
-    if not event.photo and not event.message.document:
-        return
-
-    # اگر document است، فقط image/* را قبول کن
-    if event.message.document:
-
-        mime_type = event.message.document.mime_type
-
-        if not mime_type or not mime_type.startswith("image/"):
-            return
-
-    print("PRIVATE IMAGE DETECTED")
-
-    temp_file = None
 
     try:
+        replied_message = await event.get_reply_message()
 
-        # دانلود عکس روی دیسک موقت
-        temp_file = await event.download_media()
-
-        if not temp_file:
-            print("IMAGE DOWNLOAD FAILED")
+        if not replied_message:
             return
 
-        print("IMAGE DOWNLOADED")
+        print("\n========== REPLIED MESSAGE INFO ==========")
 
-        # ارسال فایل دانلودشده به Saved Messages
-        await client.send_file(
-            "me",
-            temp_file
+        print("Message ID:", replied_message.id)
+        print("Date:", replied_message.date)
+
+        print("Text:", repr(replied_message.raw_text))
+
+        print("Media type:", type(replied_message.media).__name__)
+
+        print("Has photo:", replied_message.photo is not None)
+
+        print(
+            "Has document:",
+            replied_message.document is not None
         )
 
-        print("IMAGE SAVED TO SAVED MESSAGES")
+        if replied_message.photo:
+            print("Photo object:")
+            print(repr(replied_message.photo))
+
+            print("Photo ID:", replied_message.photo.id)
+            print("Photo access_hash:", replied_message.photo.access_hash)
+            print("Photo file_reference:", replied_message.photo.file_reference)
+
+        if replied_message.document:
+            print("Document MIME:", replied_message.document.mime_type)
+            print("Document ID:", replied_message.document.id)
+            print(
+                "Document file_reference:",
+                replied_message.document.file_reference
+            )
+
+        print("==========================================\n")
 
     except Exception as e:
-
-        print("PHOTO SAVE ERROR:", repr(e))
-
-    finally:
-
-        # حذف فایل موقت
-        if temp_file and os.path.exists(temp_file):
-            try:
-                os.remove(temp_file)
-            except Exception:
-                pass
+        print("ERROR:", repr(e))
 
 
 async def main():
@@ -80,9 +74,11 @@ async def main():
 
     me = await client.get_me()
 
+    print(f"Logged in as: {me.first_name}")
+
     print("Self-bot is running...")
 
 
 with client:
     client.loop.run_until_complete(main())
-    client.run_until_disconnected() 
+    client.run_until_disconnected()

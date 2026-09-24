@@ -20,7 +20,7 @@ async def new_message(event):
     if not event.is_private:
         return
 
-    # فقط پیام‌هایی که Reply هستند
+    # فقط وقتی روی یک پیام Reply شده
     if not event.is_reply:
         return
 
@@ -30,39 +30,58 @@ async def new_message(event):
         if not replied_message:
             return
 
-        print("\n========== REPLIED MESSAGE INFO ==========")
+        # فقط عکس
+        if not replied_message.photo:
+            return
 
+        print("\n========== PHOTO TEST ==========")
         print("Message ID:", replied_message.id)
-        print("Date:", replied_message.date)
+        print("Photo ID:", replied_message.photo.id)
 
-        print("Text:", repr(replied_message.raw_text))
-
-        print("Media type:", type(replied_message.media).__name__)
-
-        print("Has photo:", replied_message.photo is not None)
-
-        print(
-            "Has document:",
-            replied_message.document is not None
+        # پیام را با ID دوباره از Telegram می‌گیریم
+        fresh_message = await client.get_messages(
+            event.chat_id,
+            ids=replied_message.id
         )
 
-        if replied_message.photo:
-            print("Photo object:")
-            print(repr(replied_message.photo))
+        print("Fresh message loaded.")
 
-            print("Photo ID:", replied_message.photo.id)
-            print("Photo access_hash:", replied_message.photo.access_hash)
-            print("Photo file_reference:", replied_message.photo.file_reference)
+        if not fresh_message or not fresh_message.photo:
+            print("Fresh photo not found.")
+            return
 
-        if replied_message.document:
-            print("Document MIME:", replied_message.document.mime_type)
-            print("Document ID:", replied_message.document.id)
-            print(
-                "Document file_reference:",
-                replied_message.document.file_reference
-            )
+        print("Fresh Photo ID:", fresh_message.photo.id)
+        print(
+            "Fresh file_reference:",
+            fresh_message.photo.file_reference
+        )
 
-        print("==========================================\n")
+        # دانلود مستقیم عکس
+        file_path = await client.download_media(
+            fresh_message
+        )
+
+        print("Downloaded:", file_path)
+
+        if not file_path:
+            print("DOWNLOAD FAILED")
+            return
+
+        # ارسال فایل دانلودشده به Saved Messages
+        await client.send_file(
+            "me",
+            file_path
+        )
+
+        print("SAVED TO SAVED MESSAGES")
+
+        # حذف فایل موقت
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
+
+        print("================================\n")
 
     except Exception as e:
         print("ERROR:", repr(e))
@@ -73,8 +92,6 @@ async def main():
     print("Self-bot is starting...")
 
     me = await client.get_me()
-
-    print(f"Logged in as: {me.first_name}")
 
     print("Self-bot is running...")
 

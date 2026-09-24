@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from telethon import TelegramClient, events
 
@@ -24,50 +25,53 @@ async def new_message(event):
     if event.out:
         return
 
-    print("========== PRIVATE MESSAGE ==========")
-    print("Text:", event.raw_text)
-    print("Media:", type(event.message.media).__name__)
-    print("Photo:", event.message.photo is not None)
-    print("Document:", event.message.document is not None)
+    # فقط عکس یا تصویر
+    if not event.photo and not event.message.document:
+        return
 
-    # فقط تصویر
-    is_image = False
-
-    # عکس معمولی تلگرام
-    if event.message.photo is not None:
-        is_image = True
-
-    # تصویر ارسال‌شده به شکل فایل
-    elif event.message.document is not None:
+    # اگر document است، فقط image/* را قبول کن
+    if event.message.document:
 
         mime_type = event.message.document.mime_type
 
-        print("Document MIME:", mime_type)
+        if not mime_type or not mime_type.startswith("image/"):
+            return
 
-        if mime_type and mime_type.startswith("image/"):
-            is_image = True
+    print("PRIVATE IMAGE DETECTED")
 
-    if not is_image:
-        print("Not an image.")
-        print("=====================================")
-        return
-
-    print("IMAGE DETECTED")
+    temp_file = None
 
     try:
 
+        # دانلود عکس روی دیسک موقت
+        temp_file = await event.download_media()
+
+        if not temp_file:
+            print("IMAGE DOWNLOAD FAILED")
+            return
+
+        print("IMAGE DOWNLOADED")
+
+        # ارسال فایل دانلودشده به Saved Messages
         await client.send_file(
             "me",
-            event.message.media
+            temp_file
         )
 
         print("IMAGE SAVED TO SAVED MESSAGES")
 
     except Exception as e:
 
-        print("SAVE ERROR:", repr(e))
+        print("PHOTO SAVE ERROR:", repr(e))
 
-    print("=====================================")
+    finally:
+
+        # حذف فایل موقت
+        if temp_file and os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except Exception:
+                pass
 
 
 async def main():
@@ -76,11 +80,9 @@ async def main():
 
     me = await client.get_me()
 
-    print(f"Logged in as: {me.first_name}")
-
     print("Self-bot is running...")
 
 
 with client:
     client.loop.run_until_complete(main())
-    client.run_until_disconnected()
+    client.run_until_disconnected() 

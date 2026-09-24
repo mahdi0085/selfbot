@@ -22,7 +22,7 @@ client = TelegramClient(
 # n8n Settings
 # =========================
 
-SETTINGS_URL = "https://mehdi342.app.n8n.cloud/webhook-test/selfbot/settings"
+SETTINGS_URL = "https://mehdi342.app.n8n.cloud/webhook/selfbot/settings"
 
 
 def get_photo_save():

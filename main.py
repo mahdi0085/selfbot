@@ -16,27 +16,34 @@ client = TelegramClient(
 @client.on(events.NewMessage)
 async def new_message(event):
 
-    # فقط پیام‌های خصوصی (PV)
+    # فقط PV
     if not event.is_private:
         return
 
-    # اگر پیام عکس ندارد، کاری نکن
-    if event.message.photo is None:
-        return
-
-    # اگر عکس را خود اکانت فرستاده، دوباره ذخیره نکن
+    # پیام‌های ارسالی خودمان را نادیده بگیر
     if event.out:
         return
 
-    print("PRIVATE PHOTO DETECTED")
+    # فقط رسانه‌های تصویری
+    if not event.photo and not event.message.document:
+        return
+
+    # اگر document است، مطمئن شو واقعاً تصویر است
+    if event.message.document:
+        mime_type = event.message.document.mime_type
+
+        if not mime_type or not mime_type.startswith("image/"):
+            return
+
+    print("PRIVATE IMAGE DETECTED")
 
     try:
         await client.send_file(
             "me",
-            event.message.photo
+            event.message.media
         )
 
-        print("PRIVATE PHOTO SAVED TO SAVED MESSAGES")
+        print("PRIVATE IMAGE SAVED TO SAVED MESSAGES")
 
     except Exception as e:
         print(f"PHOTO SAVE ERROR: {e}")

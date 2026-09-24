@@ -44,11 +44,56 @@ def get_photo_save():
 
 @client.on(events.NewMessage)
 async def new_message(event):
+
     print("New message received:")
     print(event.raw_text)
 
+    # =========================
+    # Ping
+    # =========================
+
     if event.raw_text == "/ping":
         await event.reply("Pong 🟢")
+        return
+
+    # =========================
+    # Photo
+    # =========================
+
+    if event.photo:
+
+        # اگر پیام را خود اکانت فرستاده، کاری نکن
+        if event.out:
+            return
+
+        # اگر پیام از PV نیست، کاری نکن
+        if not event.is_private:
+            print("Photo is not from private chat. Ignored.")
+            return
+
+        print("Private photo received.")
+
+        try:
+            # دریافت وضعیت از n8n
+            photo_save = get_photo_save()
+
+            print(f"Photo save setting: {photo_save}")
+
+            if photo_save:
+
+                # ارسال عکس به Saved Messages
+                await client.send_file(
+                    "me",
+                    event.photo
+                )
+
+                print("Photo sent to Saved Messages.")
+
+            else:
+                print("Photo saving is disabled.")
+
+        except Exception as e:
+            print(f"Error while processing photo: {e}")
 
 
 # =========================
@@ -56,13 +101,14 @@ async def new_message(event):
 # =========================
 
 async def main():
+
     print("Self-bot is starting...")
 
     me = await client.get_me()
 
     print(f"Logged in as: {me.first_name}")
 
-    # دریافت تنظیم از n8n
+    # دریافت تنظیم فعلی از n8n
     photo_save = get_photo_save()
 
     print(f"Photo save: {photo_save}")

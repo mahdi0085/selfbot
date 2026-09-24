@@ -20,33 +20,54 @@ async def new_message(event):
     if not event.is_private:
         return
 
-    # پیام‌های ارسالی خودمان را نادیده بگیر
+    # پیام‌های خودمان را نادیده بگیر
     if event.out:
         return
 
-    # فقط رسانه‌های تصویری
-    if not event.photo and not event.message.document:
-        return
+    print("========== PRIVATE MESSAGE ==========")
+    print("Text:", event.raw_text)
+    print("Media:", type(event.message.media).__name__)
+    print("Photo:", event.message.photo is not None)
+    print("Document:", event.message.document is not None)
 
-    # اگر document است، مطمئن شو واقعاً تصویر است
-    if event.message.document:
+    # فقط تصویر
+    is_image = False
+
+    # عکس معمولی تلگرام
+    if event.message.photo is not None:
+        is_image = True
+
+    # تصویر ارسال‌شده به شکل فایل
+    elif event.message.document is not None:
+
         mime_type = event.message.document.mime_type
 
-        if not mime_type or not mime_type.startswith("image/"):
-            return
+        print("Document MIME:", mime_type)
 
-    print("PRIVATE IMAGE DETECTED")
+        if mime_type and mime_type.startswith("image/"):
+            is_image = True
+
+    if not is_image:
+        print("Not an image.")
+        print("=====================================")
+        return
+
+    print("IMAGE DETECTED")
 
     try:
+
         await client.send_file(
             "me",
             event.message.media
         )
 
-        print("PRIVATE IMAGE SAVED TO SAVED MESSAGES")
+        print("IMAGE SAVED TO SAVED MESSAGES")
 
     except Exception as e:
-        print(f"PHOTO SAVE ERROR: {e}")
+
+        print("SAVE ERROR:", repr(e))
+
+    print("=====================================")
 
 
 async def main():

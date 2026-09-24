@@ -16,9 +16,9 @@ client = TelegramClient(
 @client.on(events.NewMessage)
 async def new_message(event):
 
-    # هر نوع پیام را بررسی می‌کنیم
-    print("New message received:")
-    print(event.raw_text)
+    # فقط پیام‌های خصوصی (PV)
+    if not event.is_private:
+        return
 
     # اگر پیام عکس ندارد، کاری نکن
     if event.message.photo is None:
@@ -28,7 +28,7 @@ async def new_message(event):
     if event.out:
         return
 
-    print("PHOTO DETECTED")
+    print("PRIVATE PHOTO DETECTED")
 
     try:
         await client.send_file(
@@ -36,7 +36,7 @@ async def new_message(event):
             event.message.photo
         )
 
-        print("PHOTO SAVED TO SAVED MESSAGES")
+        print("PRIVATE PHOTO SAVED TO SAVED MESSAGES")
 
     except Exception as e:
         print(f"PHOTO SAVE ERROR: {e}")

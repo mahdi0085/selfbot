@@ -21,15 +21,73 @@ client = TelegramClient(
 @client.on(events.NewMessage)
 async def new_message(event):
 
-    # فقط پیام خصوصی
+    # فقط پیام‌های خصوصی
     if not event.is_private:
         return
 
-    # پیام‌هایی که خود اکانت ارسال کرده را نادیده بگیر
+    # =========================
+    # دستور /ask
+    # =========================
+
+    # فقط پیام‌هایی که خود اکانت ارسال کرده
     if event.out:
+
+        message = event.raw_text.strip()
+
+        # بررسی اینکه پیام با /ask شروع شده
+        if message.startswith("/ask "):
+
+            parts = message.split(maxsplit=2)
+
+            # فرمت صحیح:
+            # /ask @username message
+            if len(parts) < 3:
+                print("Invalid /ask format.")
+                return
+
+            command = parts[0]
+            username = parts[1]
+            text = parts[2].strip()
+
+            if not username.startswith("@"):
+                print("Invalid username. Use @username")
+                return
+
+            if not text:
+                print("Message text is empty.")
+                return
+
+            print("\n========== ASK COMMAND ==========")
+            print("Target:", username)
+            print("Message:", text)
+
+            try:
+
+                # پیدا کردن کاربر مقصد
+                entity = await client.get_entity(username)
+
+                # ارسال پیام
+                await client.send_message(
+                    entity,
+                    text
+                )
+
+                print("Message sent successfully.")
+
+            except Exception as e:
+                print("ASK ERROR:", repr(e))
+
+            print("=================================\n")
+
+        # تمام پیام‌های خروجی خود اکانت
+        # به n8n ارسال نمی‌شوند
         return
 
-    # متن پیام
+
+    # =========================
+    # پیام‌های دریافتی
+    # =========================
+
     message = event.raw_text.strip()
 
     # پیام خالی
@@ -55,19 +113,22 @@ async def new_message(event):
         print("n8n Status:", response.status_code)
         print("n8n Response:", response.text)
 
+        # بررسی موفق بودن درخواست
         if response.status_code != 200:
             print("n8n request failed.")
             return
 
+        # تبدیل پاسخ n8n به JSON
         data = response.json()
 
+        # گرفتن جواب AI
         reply = data.get("reply", "").strip()
 
         if not reply:
             print("No reply received from n8n.")
             return
 
-        # ارسال جواب به همان چت
+        # ارسال جواب به همان شخص
         await client.send_message(
             event.chat_id,
             reply

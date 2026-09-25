@@ -1,10 +1,15 @@
+
 import os
+import requests
 
 from telethon import TelegramClient, events
 
 
 API_ID = int(os.environ["API_ID"])
 API_HASH = os.environ["API_HASH"]
+
+N8N_WEBHOOK_URL = os.environ["https://mehdi342.app.n8n.cloud/webhook-test/telegram-account-ai"]
+
 
 client = TelegramClient(
     "/data/selfbot",
@@ -16,82 +21,67 @@ client = TelegramClient(
 @client.on(events.NewMessage)
 async def new_message(event):
 
-    # فقط PV
+    # فقط پیام خصوصی
     if not event.is_private:
         return
 
-    # فقط وقتی روی یک پیام Reply شده
-    if not event.is_reply:
+    # متن پیام
+    message = event.raw_text.strip()
+
+    # پیام خالی
+    if not message:
         return
 
+    print("\n========== NEW PRIVATE MESSAGE ==========")
+    print("Chat ID:", event.chat_id)
+    print("Message:", message)
+
     try:
-        replied_message = await event.get_reply_message()
 
-        if not replied_message:
+        # ارسال پیام به n8n
+        response = requests.post(
+            N8N_WEBHOOK_URL,
+            json={
+                "message": message,
+                "chat_id": event.chat_id
+            },
+            timeout=120
+        )
+
+        print("n8n Status:", response.status_code)
+        print("n8n Response:", response.text)
+
+        if response.status_code != 200:
+            print("n8n request failed.")
             return
 
-        # فقط عکس
-        if not replied_message.photo:
+        data = response.json()
+
+        reply = data.get("reply", "").strip()
+
+        if not reply:
+            print("No reply received from n8n.")
             return
 
-        print("\n========== PHOTO TEST ==========")
-        print("Message ID:", replied_message.id)
-        print("Photo ID:", replied_message.photo.id)
-
-        # پیام را با ID دوباره از Telegram می‌گیریم
-        fresh_message = await client.get_messages(
+        # ارسال جواب به همان چت
+        await client.send_message(
             event.chat_id,
-            ids=replied_message.id
+            reply
         )
 
-        print("Fresh message loaded.")
-
-        if not fresh_message or not fresh_message.photo:
-            print("Fresh photo not found.")
-            return
-
-        print("Fresh Photo ID:", fresh_message.photo.id)
-        print(
-            "Fresh file_reference:",
-            fresh_message.photo.file_reference
-        )
-
-        # دانلود مستقیم عکس
-        file_path = await client.download_media(
-            fresh_message
-        )
-
-        print("Downloaded:", file_path)
-
-        if not file_path:
-            print("DOWNLOAD FAILED")
-            return
-
-        # ارسال فایل دانلودشده به Saved Messages
-        await client.send_file(
-            "me",
-            file_path
-        )
-
-        print("SAVED TO SAVED MESSAGES")
-
-        # حذف فایل موقت
-        try:
-            os.remove(file_path)
-        except Exception:
-            pass
-
-        print("================================\n")
+        print("Reply sent successfully.")
 
     except Exception as e:
         print("ERROR:", repr(e))
+
+    print("========================================\n")
 
 
 async def main():
 
     print("Self-bot is starting...")
 
-    me = await client.get_me()
+    await client.get_me()
 
     print("Self-bot is running...")
 
@@ -99,3 +89,4 @@ async def main():
 with client:
     client.loop.run_until_complete(main())
     client.run_until_disconnected()
+

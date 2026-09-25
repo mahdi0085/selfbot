@@ -8,8 +8,7 @@ from telethon import TelegramClient, events
 API_ID = int(os.environ["API_ID"])
 API_HASH = os.environ["API_HASH"]
 
-N8N_WEBHOOK_URL = "https://mehdi342.app.n8n.cloud/webhook-test/telegram-account-ai"
-
+N8N_WEBHOOK_URL = "https://mehdi342.app.n8n.cloud/webhook/telegram-account-ai"
 
 client = TelegramClient(
     "/data/selfbot",

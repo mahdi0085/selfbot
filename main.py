@@ -25,72 +25,111 @@ async def new_message(event):
     if not event.is_private:
         return
 
-    # =========================
-    # دستور /ask
-    # =========================
+    # =====================================
+    # پیام‌های ارسال‌شده توسط خود اکانت
+    # =====================================
 
-    # فقط پیام‌هایی که خود اکانت ارسال کرده
     if event.out:
 
         message = event.raw_text.strip()
 
-        # بررسی اینکه پیام با /ask شروع شده
+        # ---------------------------------
+        # /ask @username
+        # ---------------------------------
+
         if message.startswith("/ask "):
 
             parts = message.split(maxsplit=2)
 
-            # فرمت صحیح:
-            # /ask @username message
-            if len(parts) < 3:
-                print("Invalid /ask format.")
+            # باید حداقل /ask و username وجود داشته باشد
+            if len(parts) < 2:
+                print("Usage: /ask @username")
                 return
 
-            command = parts[0]
             username = parts[1]
-            text = parts[2].strip()
 
             if not username.startswith("@"):
-                print("Invalid username. Use @username")
+                print("Username must start with @")
                 return
 
-            if not text:
-                print("Message text is empty.")
-                return
+            # اگر متن سوم وجود داشته باشد،
+            # همان متن قبلی را استفاده می‌کنیم.
+            custom_message = parts[2].strip() if len(parts) == 3 else ""
 
             print("\n========== ASK COMMAND ==========")
             print("Target:", username)
-            print("Message:", text)
 
             try:
 
-                # پیدا کردن کاربر مقصد
+                # پیدا کردن شخص مقصد
                 entity = await client.get_entity(username)
 
-                # ارسال پیام
+                # ---------------------------------
+                # حالت جدید:
+                # /ask @username
+                # ---------------------------------
+
+                if not custom_message:
+
+                    print("Requesting message from n8n AI...")
+
+                    response = requests.post(
+                        N8N_WEBHOOK_URL,
+                        json={
+                            "action": "ask",
+                            "username": username
+                        },
+                        timeout=120
+                    )
+
+                    print("n8n Status:", response.status_code)
+                    print("n8n Response:", response.text)
+
+                    if response.status_code != 200:
+                        print("n8n request failed.")
+                        return
+
+                    data = response.json()
+
+                    text_to_send = data.get("reply", "").strip()
+
+                    if not text_to_send:
+                        print("AI did not generate a message.")
+                        return
+
+                # ---------------------------------
+                # حالت قبلی:
+                # /ask @username message
+                # ---------------------------------
+
+                else:
+
+                    text_to_send = custom_message
+
+                # ارسال پیام به شخص
                 await client.send_message(
                     entity,
-                    text
+                    text_to_send
                 )
 
                 print("Message sent successfully.")
+                print("Message:", text_to_send)
 
             except Exception as e:
                 print("ASK ERROR:", repr(e))
 
             print("=================================\n")
 
-        # تمام پیام‌های خروجی خود اکانت
-        # به n8n ارسال نمی‌شوند
+        # پیام‌های خروجی خود اکانت به n8n نمی‌روند
         return
 
 
-    # =========================
-    # پیام‌های دریافتی
-    # =========================
+    # =====================================
+    # پیام‌های دریافتی از دیگران
+    # =====================================
 
     message = event.raw_text.strip()
 
-    # پیام خالی
     if not message:
         return
 
@@ -100,7 +139,6 @@ async def new_message(event):
 
     try:
 
-        # ارسال پیام به n8n
         response = requests.post(
             N8N_WEBHOOK_URL,
             json={
@@ -113,22 +151,18 @@ async def new_message(event):
         print("n8n Status:", response.status_code)
         print("n8n Response:", response.text)
 
-        # بررسی موفق بودن درخواست
         if response.status_code != 200:
             print("n8n request failed.")
             return
 
-        # تبدیل پاسخ n8n به JSON
         data = response.json()
 
-        # گرفتن جواب AI
         reply = data.get("reply", "").strip()
 
         if not reply:
             print("No reply received from n8n.")
             return
 
-        # ارسال جواب به همان شخص
         await client.send_message(
             event.chat_id,
             reply

@@ -10,6 +10,7 @@ API_HASH = os.environ["API_HASH"]
 
 N8N_WEBHOOK_URL = "https://mehdi342.app.n8n.cloud/webhook-test/telegram-account-ai"
 
+
 client = TelegramClient(
     "/data/selfbot",
     API_ID,
@@ -22,6 +23,10 @@ async def new_message(event):
 
     # فقط پیام خصوصی
     if not event.is_private:
+        return
+
+    # پیام‌هایی که خود اکانت ارسال کرده را نادیده بگیر
+    if event.out:
         return
 
     # متن پیام

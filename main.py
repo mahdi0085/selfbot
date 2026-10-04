@@ -30,7 +30,7 @@ async def new_message(event):
         if not replied_message:
             return
 
-        # فقط عکس و ویدیو
+        # فقط عکس یا ویدیو
         if not replied_message.photo and not replied_message.video:
             return
 
@@ -38,9 +38,11 @@ async def new_message(event):
         print("Message ID:", replied_message.id)
 
         if replied_message.photo:
+            print("Type: PHOTO")
             print("Photo ID:", replied_message.photo.id)
 
         if replied_message.video:
+            print("Type: VIDEO")
             print("Video ID:", replied_message.video.id)
 
         # پیام را با ID دوباره از Telegram می‌گیریم
@@ -59,17 +61,7 @@ async def new_message(event):
             print("Fresh media not found.")
             return
 
-        if fresh_message.photo:
-            print("Fresh Photo ID:", fresh_message.photo.id)
-            print(
-                "Fresh file_reference:",
-                fresh_message.photo.file_reference
-            )
-
-        if fresh_message.video:
-            print("Fresh Video ID:", fresh_message.video.id)
-
-        # دانلود مستقیم عکس یا ویدیو
+        # دانلود عکس یا ویدیو
         file_path = await client.download_media(
             fresh_message
         )
@@ -80,7 +72,7 @@ async def new_message(event):
             print("DOWNLOAD FAILED")
             return
 
-        # ارسال فایل دانلودشده به Saved Messages
+        # ارسال به Saved Messages
         await client.send_file(
             "me",
             file_path

@@ -1,24 +1,11 @@
+
 import os
-import json
 
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 
-
-# =====================================
-# CONFIG
-# =====================================
 
 API_ID = int(os.environ["API_ID"])
 API_HASH = os.environ["API_HASH"]
-
-CHANNEL_USERNAME = "@badje12"
-
-OUTPUT_FILE = "/data/badje12_messages.jsonl"
-
-
-# =====================================
-# TELEGRAM CLIENT
-# =====================================
 
 client = TelegramClient(
     "/data/selfbot",
@@ -27,120 +14,102 @@ client = TelegramClient(
 )
 
 
-# =====================================
-# EXPORT TEXT
-# =====================================
+@client.on(events.NewMessage)
+async def new_message(event):
 
-async def export_channel():
+    # فقط PV
+    if not event.is_private:
+        return
 
-    print("\n================================")
-    print("Starting channel export...")
-    print("Channel:", CHANNEL_USERNAME)
-    print("================================\n")
+    # فقط وقتی روی یک پیام Reply شده
+    if not event.is_reply:
+        return
 
-    # پیدا کردن کانال
-    channel = await client.get_entity(
-        CHANNEL_USERNAME
-    )
+    try:
+        replied_message = await event.get_reply_message()
 
-    print(
-        "Channel:",
-        getattr(channel, "title", "")
-    )
+        if not replied_message:
+            return
 
-    print(
-        "Channel ID:",
-        channel.id
-    )
+        # فقط عکس و ویدیو
+        if not replied_message.photo and not replied_message.video:
+            return
 
-    # ---------------------------------
-    # استخراج پیام‌ها
-    # ---------------------------------
+        print("\n========== MEDIA TEST ==========")
+        print("Message ID:", replied_message.id)
 
-    count = 0
+        if replied_message.photo:
+            print("Photo ID:", replied_message.photo.id)
 
-    with open(
-        OUTPUT_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+        if replied_message.video:
+            print("Video ID:", replied_message.video.id)
 
-        async for message in client.iter_messages(
-            channel,
-            reverse=True
-        ):
+        # پیام را با ID دوباره از Telegram می‌گیریم
+        fresh_message = await client.get_messages(
+            event.chat_id,
+            ids=replied_message.id
+        )
 
-            # فقط پیام‌هایی که متن دارند
-            if not message.raw_text:
-                continue
+        print("Fresh message loaded.")
 
-            text = message.raw_text.strip()
+        if not fresh_message:
+            print("Fresh media not found.")
+            return
 
-            if not text:
-                continue
+        if not fresh_message.photo and not fresh_message.video:
+            print("Fresh media not found.")
+            return
 
-            data = {
-                "message_id": message.id,
-
-                "date": (
-                    message.date.isoformat()
-                    if message.date
-                    else None
-                ),
-
-                "text": text
-            }
-
-            file.write(
-                json.dumps(
-                    data,
-                    ensure_ascii=False
-                )
-                + "\n"
-            )
-
-            count += 1
-
+        if fresh_message.photo:
+            print("Fresh Photo ID:", fresh_message.photo.id)
             print(
-                f"[{count}] Message ID: {message.id}"
+                "Fresh file_reference:",
+                fresh_message.photo.file_reference
             )
 
-    print("\n================================")
-    print("EXPORT COMPLETE")
-    print("Messages:", count)
-    print("File:", OUTPUT_FILE)
-    print("================================\n")
+        if fresh_message.video:
+            print("Fresh Video ID:", fresh_message.video.id)
 
+        # دانلود مستقیم عکس یا ویدیو
+        file_path = await client.download_media(
+            fresh_message
+        )
 
-# =====================================
-# MAIN
-# =====================================
+        print("Downloaded:", file_path)
+
+        if not file_path:
+            print("DOWNLOAD FAILED")
+            return
+
+        # ارسال فایل دانلودشده به Saved Messages
+        await client.send_file(
+            "me",
+            file_path
+        )
+
+        print("SAVED TO SAVED MESSAGES")
+
+        # حذف فایل موقت
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
+
+        print("================================\n")
+
+    except Exception as e:
+        print("ERROR:", repr(e))
+
 
 async def main():
 
-    print(
-        "Connecting to Telegram..."
-    )
-
-    await client.start()
+    print("Self-bot is starting...")
 
     me = await client.get_me()
 
-    print(
-        "Logged in as:",
-        me.first_name,
-        me.id
-    )
+    print("Self-bot is running...")
 
-    await export_channel()
-
-
-# =====================================
-# START
-# =====================================
 
 with client:
-
-    client.loop.run_until_complete(
-        main()
-    )
+    client.loop.run_until_complete(main())
+    client.run_until_disconnected()

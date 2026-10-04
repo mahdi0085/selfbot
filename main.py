@@ -1,4 +1,3 @@
-
 import os
 
 from telethon import TelegramClient, events
@@ -37,6 +36,7 @@ async def new_message(event):
 
         print("\n========== MEDIA TEST ==========")
         print("Message ID:", replied_message.id)
+        print("Sender ID:", replied_message.sender_id)
 
         if replied_message.photo:
             print("Photo ID:", replied_message.photo.id)
@@ -44,35 +44,9 @@ async def new_message(event):
         if replied_message.video:
             print("Video ID:", replied_message.video.id)
 
-        # پیام را با ID دوباره از Telegram می‌گیریم
-        fresh_message = await client.get_messages(
-            event.chat_id,
-            ids=replied_message.id
-        )
-
-        print("Fresh message loaded.")
-
-        if not fresh_message:
-            print("Fresh media not found.")
-            return
-
-        if not fresh_message.photo and not fresh_message.video:
-            print("Fresh media not found.")
-            return
-
-        if fresh_message.photo:
-            print("Fresh Photo ID:", fresh_message.photo.id)
-            print(
-                "Fresh file_reference:",
-                fresh_message.photo.file_reference
-            )
-
-        if fresh_message.video:
-            print("Fresh Video ID:", fresh_message.video.id)
-
-        # دانلود مستقیم عکس یا ویدیو
+        # دانلود همان پیامی که روی آن Reply شده
         file_path = await client.download_media(
-            fresh_message
+            replied_message
         )
 
         print("Downloaded:", file_path)

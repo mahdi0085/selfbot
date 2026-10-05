@@ -93,7 +93,7 @@ async def main():
 
     me = await client.get_me()
 
-    print("Self-bot is running...")
+    print("Self-bot is running has")
 
 
 with client:
